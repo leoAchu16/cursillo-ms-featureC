@@ -1,4 +1,8 @@
+// AlumnoRepository.java
 package org.cursillo.facturacion.repository;
 
-public interface AlumnoRepository {
+import org.cursillo.commons.entities.Usuarios.Alumno;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface AlumnoRepository extends JpaRepository<Alumno, Integer> {
 }
