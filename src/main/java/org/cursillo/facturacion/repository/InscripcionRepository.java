@@ -1,4 +1,8 @@
+// InscripcionRepository.java
 package org.cursillo.facturacion.repository;
 
-public interface InscripcionRepository {
+import org.cursillo.commons.entities.Inscripciones.Inscripcion;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface InscripcionRepository extends JpaRepository<Inscripcion, Integer> {
 }
