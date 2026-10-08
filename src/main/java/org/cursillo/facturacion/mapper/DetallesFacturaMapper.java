@@ -33,7 +33,9 @@ public class DetallesFacturaMapper {
         if (dto == null) return null;
         DetallesFactura entity = new DetallesFactura();
         entity.setIdDetalleFactura(dto.getIdDetalleFactura());
-        entity.setFactura(facturaRepository.getReferenceById(dto.getIdFactura()));
+        if (dto.getIdFactura() != null) {
+            entity.setFactura(facturaRepository.getReferenceById(dto.getIdFactura()));
+        }
         entity.setConcepto(conceptoRepository.getReferenceById(dto.getIdConcepto()));
         entity.setSubtotal(dto.getSubtotal());
         entity.setCantidad(dto.getCantidad());

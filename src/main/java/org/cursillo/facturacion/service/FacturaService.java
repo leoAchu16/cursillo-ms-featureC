@@ -36,7 +36,6 @@ public class FacturaService {
     }
 
     public FacturaDTO create(FacturaDTO dto) {
-        // Validación manual: la Entity exige idInscripcion aunque el DTO no lo marque required
         if (dto.getIdInscripcion() == null) {
             throw new IllegalArgumentException("idInscripcion es obligatorio para crear una Factura");
         }
@@ -45,7 +44,7 @@ public class FacturaService {
         entity.setIdFactura(null);
         Factura guardada = facturaRepository.save(entity);
 
-        // Guardamos los detalles por separado (no hay cascade configurado en la Entity)
+        List<DetallesFactura> detallesGuardados = new java.util.ArrayList<>();
         if (dto.getDetallesFactura() != null) {
             for (DetallesFacturaDTO detalleDTO : dto.getDetallesFactura()) {
                 if (detalleDTO.getCantidad() == null) {
@@ -54,13 +53,13 @@ public class FacturaService {
                 DetallesFactura detalle = detallesFacturaMapper.toEntity(detalleDTO);
                 detalle.setIdDetalleFactura(null);
                 detalle.setFactura(guardada);
-                detallesFacturaRepository.save(detalle);
+                detallesGuardados.add(detallesFacturaRepository.save(detalle));
             }
         }
+        guardada.setDetalles(detallesGuardados);
 
-        return facturaMapper.toDTO(facturaRepository.findById(guardada.getIdFactura()).orElseThrow());
+        return facturaMapper.toDTO(guardada);
     }
-
     public FacturaDTO update(Integer id, FacturaDTO dto) {
         Factura existente = facturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
