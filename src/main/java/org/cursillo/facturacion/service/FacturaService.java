@@ -64,10 +64,12 @@ public class FacturaService {
         guardada.setDetalles(detallesGuardados);
 
         // actualiza el estado de la inscripcion a pagado
-        Inscripcion inscripcion = inscripcionRepository.findById(dto.getIdInscripcion())
-                .orElseThrow(() -> new ResourceNotFoundException("Inscripcion no encontrada: " + dto.getIdInscripcion()));
-        inscripcion.setEstadoPago(EstadoPago.PAGADO);
-        inscripcionRepository.save(inscripcion);
+        if(dto.getIdInscripcion() != null) {
+            Inscripcion inscripcion = inscripcionRepository.findById(dto.getIdInscripcion())
+                    .orElseThrow(() -> new ResourceNotFoundException("Inscripcion no encontrada: " + dto.getIdInscripcion()));
+            inscripcion.setEstadoPago(EstadoPago.PAGADO);
+            inscripcionRepository.save(inscripcion);
+        }
 
         return facturaMapper.toDTO(guardada);
     }
