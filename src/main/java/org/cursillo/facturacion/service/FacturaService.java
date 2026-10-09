@@ -3,14 +3,17 @@ package org.cursillo.facturacion.service;
 
 import org.cursillo.commons.dto.FacturaDTO;
 import org.cursillo.commons.dto.DetallesFacturaDTO;
+import org.cursillo.commons.entities.Enums.EstadoPago;
 import org.cursillo.commons.entities.Enums.MetodoPago;
 import org.cursillo.commons.entities.Factura.DetallesFactura;
 import org.cursillo.commons.entities.Factura.Factura;
+import org.cursillo.commons.entities.Inscripciones.Inscripcion;
 import org.cursillo.facturacion.exception.ResourceNotFoundException;
 import org.cursillo.facturacion.mapper.FacturaMapper;
 import org.cursillo.facturacion.mapper.DetallesFacturaMapper;
 import org.cursillo.facturacion.repository.FacturaRepository;
 import org.cursillo.facturacion.repository.DetallesFacturaRepository;
+import org.cursillo.facturacion.repository.InscripcionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,15 +27,17 @@ public class FacturaService {
     private final DetallesFacturaRepository detallesFacturaRepository;
     private final FacturaMapper facturaMapper;
     private final DetallesFacturaMapper detallesFacturaMapper;
+    private final InscripcionRepository inscripcionRepository;
 
     public FacturaService(FacturaRepository facturaRepository,
-                          DetallesFacturaRepository detallesFacturaRepository,
-                          FacturaMapper facturaMapper,
-                          DetallesFacturaMapper detallesFacturaMapper) {
+            DetallesFacturaRepository detallesFacturaRepository,
+            FacturaMapper facturaMapper,
+            DetallesFacturaMapper detallesFacturaMapper, InscripcionRepository inscripcionRepository) {
         this.facturaRepository = facturaRepository;
         this.detallesFacturaRepository = detallesFacturaRepository;
         this.facturaMapper = facturaMapper;
         this.detallesFacturaMapper = detallesFacturaMapper;
+        this.inscripcionRepository = inscripcionRepository;
     }
 
     public FacturaDTO create(FacturaDTO dto) {
@@ -58,8 +63,15 @@ public class FacturaService {
         }
         guardada.setDetalles(detallesGuardados);
 
+        // actualiza el estado de la inscripcion a pagado
+        Inscripcion inscripcion = inscripcionRepository.findById(dto.getIdInscripcion())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscripcion no encontrada: " + dto.getIdInscripcion()));
+        inscripcion.setEstadoPago(EstadoPago.PAGADO);
+        inscripcionRepository.save(inscripcion);
+
         return facturaMapper.toDTO(guardada);
     }
+
     public FacturaDTO update(Integer id, FacturaDTO dto) {
         Factura existente = facturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
@@ -69,7 +81,8 @@ public class FacturaService {
         existente.setMetodoPago(MetodoPago.valueOf(dto.getMetodoPago().name()));
         existente.setFechaEmision(dto.getFechaEmision());
         // Nota: actualizar alumno/secretaria/inscripcion/detalles no lo cubrimos acá
-        // para no complicar el update - se puede agregar después si el profesor lo pide.
+        // para no complicar el update - se puede agregar después si el profesor lo
+        // pide.
 
         return facturaMapper.toDTO(facturaRepository.save(existente));
     }
