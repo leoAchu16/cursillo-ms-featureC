@@ -1,4 +1,3 @@
-// FacturaService.java
 package org.cursillo.facturacion.service;
 
 import org.cursillo.commons.dto.FacturaDTO;
@@ -14,6 +13,9 @@ import org.cursillo.facturacion.mapper.DetallesFacturaMapper;
 import org.cursillo.facturacion.repository.FacturaRepository;
 import org.cursillo.facturacion.repository.DetallesFacturaRepository;
 import org.cursillo.facturacion.repository.InscripcionRepository;
+import org.springframework.cache.annotation.CacheEvict; // Agregado
+import org.springframework.cache.annotation.CachePut;   // Agregado
+import org.springframework.cache.annotation.Cacheable; // Agregado
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,9 +32,9 @@ public class FacturaService {
     private final InscripcionRepository inscripcionRepository;
 
     public FacturaService(FacturaRepository facturaRepository,
-            DetallesFacturaRepository detallesFacturaRepository,
-            FacturaMapper facturaMapper,
-            DetallesFacturaMapper detallesFacturaMapper, InscripcionRepository inscripcionRepository) {
+                          DetallesFacturaRepository detallesFacturaRepository,
+                          FacturaMapper facturaMapper,
+                          DetallesFacturaMapper detallesFacturaMapper, InscripcionRepository inscripcionRepository) {
         this.facturaRepository = facturaRepository;
         this.detallesFacturaRepository = detallesFacturaRepository;
         this.facturaMapper = facturaMapper;
@@ -74,6 +76,8 @@ public class FacturaService {
         return facturaMapper.toDTO(guardada);
     }
 
+    // Actualiza la factura en la memoria caché cuando se edita
+    @CachePut(value = "facturas", key = "#id")
     public FacturaDTO update(Integer id, FacturaDTO dto) {
         Factura existente = facturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
@@ -82,27 +86,30 @@ public class FacturaService {
         existente.setTotal(dto.getTotal());
         existente.setMetodoPago(MetodoPago.valueOf(dto.getMetodoPago().name()));
         existente.setFechaEmision(dto.getFechaEmision());
-        // Nota: actualizar alumno/secretaria/inscripcion/detalles no lo cubrimos acá
-        // para no complicar el update - se puede agregar después si el profesor lo
-        // pide.
 
         return facturaMapper.toDTO(facturaRepository.save(existente));
     }
 
+    // Busca primero en Redis (clave facturas::<id>). Si no existe, consulta la base de datos y la guarda en caché
+    @Cacheable(value = "facturas", key = "#id")
     public FacturaDTO getById(Integer id) {
         Factura entity = facturaRepository.findByIdFacturaAndActivoTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
         return facturaMapper.toDTO(entity);
     }
 
+    // Las búsquedas paginadas no se cachean directamente
     public Page<FacturaDTO> getAll(Pageable pageable) {
         return facturaRepository.findAllByActivoTrue(pageable).map(facturaMapper::toDTO);
     }
 
+    // Las búsquedas avanzadas no se cachean directamente
     public Page<FacturaDTO> search(String ruc, MetodoPago metodoPago, Pageable pageable) {
         return facturaRepository.search(ruc, metodoPago, pageable).map(facturaMapper::toDTO);
     }
 
+    // Elimina el registro guardado en Redis al realizar el borrado lógico
+    @CacheEvict(value = "facturas", key = "#id")
     public void delete(Integer id) {
         Factura entity = facturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
