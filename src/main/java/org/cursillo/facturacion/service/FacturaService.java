@@ -42,6 +42,7 @@ public class FacturaService {
         this.inscripcionRepository = inscripcionRepository;
     }
 
+    @CachePut(value = "facturas", key = "#result.idFactura")
     public FacturaDTO create(FacturaDTO dto) {
         if (dto.getIdInscripcion() == null) {
             throw new IllegalArgumentException("idInscripcion es obligatorio para crear una Factura");
