@@ -62,11 +62,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
-            // LOG DE ÉXITO: Muestra el usuario y las autoridades exactas cargadas en Spring
+
             log.info(">>> JWT AUTENTICADO CON ÉXITO: usuario='{}', autoridades={} <<<", username, authorities);
 
         } catch (Exception e) {
-            // LOG DE ERROR: Imprime la excepción completa y el StackTrace en consola
+
             log.error(">>> ERROR AL VALIDAR EL TOKEN JWT: {} <<<", e.getMessage(), e);
             e.printStackTrace();
             SecurityContextHolder.clearContext();

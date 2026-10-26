@@ -26,7 +26,7 @@ public class ConceptoService {
     @CachePut(value = "conceptos", key = "#result.idConcepto")
     public ConceptoDTO create(ConceptoDTO dto) {
         Concepto entity = mapper.toEntity(dto);
-        entity.setIdConcepto(null); // por si mandan un id, lo ignoramos: lo genera la base
+        entity.setIdConcepto(null);
         return mapper.toDTO(repository.save(entity));
     }
 

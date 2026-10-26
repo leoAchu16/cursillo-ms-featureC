@@ -2,6 +2,8 @@ package org.cursillo.facturacion.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +23,8 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
@@ -29,18 +33,26 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Documentación pública: el gateway la lee sin token
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Consultar facturas y detalles: secretaría y alumno
                         .requestMatchers(HttpMethod.GET, "/facturas/**", "/detalles-facturas/**")
                         .hasAnyAuthority("SECRETARIA", "ALUMNO")
+                        // Todo lo demás de facturación y conceptos: solo secretaría
                         .requestMatchers("/facturas/**", "/detalles-facturas/**", "/conceptos/**")
                         .hasAuthority("SECRETARIA")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) ->
-                                escribir(res, 401, "Unauthorized", "Token ausente, inválido o vencido"))
-                        .accessDeniedHandler((req, res, ex) ->
-                                escribir(res, 403, "Forbidden", "No tenés permisos para acceder a este recurso")))
+                        .authenticationEntryPoint((req, res, ex) -> {
+                            log.warn("401 - acceso sin autenticación válida a {} {}", req.getMethod(), req.getRequestURI());
+                            escribir(res, 401, "Unauthorized", "Token ausente, inválido o expirado");
+                        })
+                        .accessDeniedHandler((req, res, ex) -> {
+                            log.warn("403 - acceso denegado a {} {}", req.getMethod(), req.getRequestURI());
+                            escribir(res, 403, "Forbidden", "No tenés permisos para realizar esta acción");
+                        }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
