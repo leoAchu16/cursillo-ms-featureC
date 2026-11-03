@@ -78,6 +78,8 @@ public class DetallesFacturaService {
                 .orElseThrow(() -> new ResourceNotFoundException("DetalleFactura no encontrado: " + id));
         entity.setActivo(false);
         repository.save(entity);
-        invalidarFactura(entity.getFactura().getIdFactura());
+        if (entity.getFactura() != null) {
+            invalidarFactura(entity.getFactura().getIdFactura());
+        }
     }
 }

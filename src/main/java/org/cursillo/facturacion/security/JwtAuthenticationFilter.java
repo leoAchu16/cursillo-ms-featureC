@@ -2,6 +2,7 @@ package org.cursillo.facturacion.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -26,8 +27,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    @Value("${app.security.jwt.secret}")
+    @Value("${security.jwt.secret}")
     private String jwtSecret;
+
+    @Value("${security.jwt.issuer:cursillo-ms-auth}")
+    private String jwtIssuer;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -43,32 +47,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            // Misma decodificación que cursillo-ms-auth (Base64 estándar)
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            SecretKey key = Keys.hmacShaKeyFor(keyBytes);
 
             Claims claims = Jwts.parser()
                     .verifyWith(key)
+                    .requireIssuer(jwtIssuer)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
 
             String username = claims.getSubject();
-            List<String> roles = claims.get("roles", List.class);
+            List<?> rawRoles = claims.get("roles", List.class);
 
-            List<SimpleGrantedAuthority> authorities = roles != null ?
-                    roles.stream().map(SimpleGrantedAuthority::new).toList() : List.of();
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            if (rawRoles != null) {
+                for (Object r : rawRoles) {
+                    String role = String.valueOf(r);
+                    authorities.add(new SimpleGrantedAuthority(role));
+                    if (!role.startsWith("ROLE_")) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                    }
+                }
+            }
 
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
-
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
-
-            log.info(">>> JWT AUTENTICADO CON ÉXITO: usuario='{}', autoridades={} <<<", username, authorities);
+            log.info("JWT autenticado en facturación: usuario='{}', autoridades={}", username, authorities);
 
         } catch (Exception e) {
-
-            log.error(">>> ERROR AL VALIDAR EL TOKEN JWT: {} <<<", e.getMessage(), e);
-            e.printStackTrace();
+            log.warn("Token JWT inválido en facturación: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
 
