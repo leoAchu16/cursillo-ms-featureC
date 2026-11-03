@@ -73,18 +73,20 @@ public class FacturaController {
         return ResponseEntity.ok(service.getAll(pageable));
     }
 
-    @Operation(summary = "Buscar facturas por RUC y método de pago (paginado)")
+    @Operation(summary = "Buscar facturas por texto y método de pago (paginado)",
+            description = "El texto q busca en el nombre del alumno, RUC, número de factura, "
+                    + "fecha (dd/mm/aaaa o aaaa-mm-dd) y total. El método de pago es opcional.")
     @ApiResponse(responseCode = "200", description = "Página de facturas que coinciden con los filtros")
     @GetMapping("/search")
     @PreAuthorize("hasAnyAuthority('ALUMNO', 'SECRETARIA')")
     public ResponseEntity<Page<FacturaDTO>> search(
-            @Parameter(description = "Texto a buscar dentro del RUC (opcional)")
-            @RequestParam(required = false) String ruc,
+            @Parameter(description = "Texto a buscar: alumno, RUC, N° de factura, fecha o total (opcional)")
+            @RequestParam(required = false) String q,
             @Parameter(description = "Método de pago exacto (opcional)")
             @RequestParam(required = false) MetodoPago metodoPago,
             @ParameterObject Pageable pageable) {
-        log.info("GET /facturas/search - ruc={}, metodoPago={}", ruc, metodoPago);
-        return ResponseEntity.ok(service.search(ruc, metodoPago, pageable));
+        log.info("GET /facturas/search - q={}, metodoPago={}", q, metodoPago);
+        return ResponseEntity.ok(service.search(q, metodoPago, pageable));
     }
 
     @Operation(summary = "Eliminar una factura (borrado lógico)")
