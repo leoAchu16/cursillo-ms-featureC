@@ -19,8 +19,10 @@ import org.springframework.cache.annotation.Cacheable; // Agregado
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class FacturaService {
@@ -42,10 +44,22 @@ public class FacturaService {
         this.inscripcionRepository = inscripcionRepository;
     }
 
+    // Transaccional: si algo falla, no queda la factura guardada a medias ni la inscripcion modificada
+    @Transactional
     @CachePut(value = "facturas", key = "#result.idFactura")
     public FacturaDTO create(FacturaDTO dto) {
         if (dto.getIdInscripcion() == null) {
             throw new IllegalArgumentException("idInscripcion es obligatorio para crear una Factura");
+        }
+
+        // Se valida la inscripcion antes de guardar nada
+        Inscripcion inscripcion = inscripcionRepository.findById(dto.getIdInscripcion())
+                .orElseThrow(() -> new ResourceNotFoundException("Inscripcion no encontrada: " + dto.getIdInscripcion()));
+        if (inscripcion.getEstadoPago() == EstadoPago.PAGADO) {
+            throw new IllegalArgumentException("La inscripcion ya esta pagada");
+        }
+        if (!Objects.equals(dto.getIdAlumno(), inscripcion.getAlumno().getIdUsuario())) {
+            throw new IllegalArgumentException("La inscripcion no pertenece al alumno indicado");
         }
 
         Factura entity = facturaMapper.toEntity(dto);
@@ -67,12 +81,8 @@ public class FacturaService {
         guardada.setDetalles(detallesGuardados);
 
         // actualiza el estado de la inscripcion a pagado
-        if(dto.getIdInscripcion() != null) {
-            Inscripcion inscripcion = inscripcionRepository.findById(dto.getIdInscripcion())
-                    .orElseThrow(() -> new ResourceNotFoundException("Inscripcion no encontrada: " + dto.getIdInscripcion()));
-            inscripcion.setEstadoPago(EstadoPago.PAGADO);
-            inscripcionRepository.save(inscripcion);
-        }
+        inscripcion.setEstadoPago(EstadoPago.PAGADO);
+        inscripcionRepository.save(inscripcion);
 
         return facturaMapper.toDTO(guardada);
     }
@@ -110,11 +120,21 @@ public class FacturaService {
     }
 
     // Elimina el registro guardado en Redis al realizar el borrado lógico
+    @Transactional
     @CacheEvict(value = "facturas", key = "#id")
     public void delete(Integer id) {
         Factura entity = facturaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + id));
         entity.setActivo(false);
         facturaRepository.save(entity);
+
+        // Si la inscripcion ya no tiene facturas activas, vuelve a quedar pendiente de pago
+        Inscripcion inscripcion = entity.getInscripcion();
+        if (inscripcion != null
+                && inscripcion.getEstadoPago() == EstadoPago.PAGADO
+                && !facturaRepository.existeFacturaActivaDeInscripcion(inscripcion.getIdInscripcion())) {
+            inscripcion.setEstadoPago(EstadoPago.PENDIENTE);
+            inscripcionRepository.save(inscripcion);
+        }
     }
 }

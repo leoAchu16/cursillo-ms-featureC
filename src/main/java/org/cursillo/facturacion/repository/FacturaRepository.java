@@ -59,4 +59,9 @@ public interface FacturaRepository extends JpaRepository<Factura, Integer> {
     Page<Factura> findAllByActivoTrue(Pageable pageable);
 
     Optional<Factura> findByIdFacturaAndActivoTrue(Integer idFactura);
+
+    // Indica si una inscripción todavía tiene alguna factura activa
+    @Query("select count(f) > 0 from Factura f "
+            + "where f.inscripcion.idInscripcion = :idInscripcion and f.activo = true")
+    boolean existeFacturaActivaDeInscripcion(@Param("idInscripcion") Integer idInscripcion);
 }
