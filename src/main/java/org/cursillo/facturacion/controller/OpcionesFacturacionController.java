@@ -23,13 +23,13 @@ public class OpcionesFacturacionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public List<AlumnoResumenDTO> listarAlumnos(@RequestParam(defaultValue = "") String q) {
         return service.listarAlumnos(q);
     }
 
     @GetMapping("/{idAlumno}/inscripciones-pendientes")
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public List<InscripcionPendienteDTO> listarInscripcionesPendientes(@PathVariable Integer idAlumno) {
         return service.listarInscripcionesPendientes(idAlumno);
     }

@@ -34,7 +34,7 @@ public class ConceptoController {
     @Operation(summary = "Crear un concepto")
     @ApiResponse(responseCode = "201", description = "Concepto creado")
     @PostMapping
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<ConceptoDTO> create(@RequestBody ConceptoDTO dto) {
         log.info("POST /conceptos - creando concepto: {}", dto.getNombre());
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
@@ -44,7 +44,7 @@ public class ConceptoController {
     @ApiResponse(responseCode = "200", description = "Concepto actualizado")
     @ApiResponse(responseCode = "404", description = "Concepto no encontrado")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<ConceptoDTO> update(@PathVariable Integer id, @RequestBody ConceptoDTO dto) {
         log.info("PUT /conceptos/{} - actualizando concepto", id);
         return ResponseEntity.ok(service.update(id, dto));
@@ -54,7 +54,7 @@ public class ConceptoController {
     @ApiResponse(responseCode = "200", description = "Concepto encontrado")
     @ApiResponse(responseCode = "404", description = "Concepto no encontrado o inactivo")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<ConceptoDTO> getById(@PathVariable Integer id) {
         log.info("GET /conceptos/{}", id);
         return ResponseEntity.ok(service.getById(id));
@@ -63,7 +63,7 @@ public class ConceptoController {
     @Operation(summary = "Listar conceptos activos (paginado)")
     @ApiResponse(responseCode = "200", description = "Página de conceptos")
     @GetMapping
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<Page<ConceptoDTO>> getAll(@ParameterObject Pageable pageable) {
         log.info("GET /conceptos - page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
         return ResponseEntity.ok(service.getAll(pageable));
@@ -72,7 +72,7 @@ public class ConceptoController {
     @Operation(summary = "Buscar conceptos por nombre (paginado)")
     @ApiResponse(responseCode = "200", description = "Página de conceptos que coinciden con el filtro")
     @GetMapping("/search")
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<Page<ConceptoDTO>> search(
             @Parameter(description = "Texto a buscar dentro del nombre (opcional)")
             @RequestParam(required = false) String nombre,
@@ -85,7 +85,7 @@ public class ConceptoController {
     @ApiResponse(responseCode = "204", description = "Concepto marcado como inactivo")
     @ApiResponse(responseCode = "404", description = "Concepto no encontrado")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('SECRETARIA')")
+    @PreAuthorize("hasRole('SECRETARIA')")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         log.info("DELETE /conceptos/{}", id);
         service.delete(id);
